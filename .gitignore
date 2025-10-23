@@ -1,0 +1,6 @@
+# folder virt_env
+virt_environment/
+
+# sys files python
+__pycache__/
+*.pyc
