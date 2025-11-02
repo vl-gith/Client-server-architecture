@@ -1,0 +1,31 @@
+<!doctype html>
+    <title>Ошибка</title>
+    <body>
+        <h1>Произошла ошибка</h1>
+        <p>{{ error_message }}</p>
+        <br>
+        <div style="margin-top: 40px;">
+            <h2>Последние события в журнале:</h2>
+            <table border="1" style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td>Время</td>
+                        <td>Тип события</td>
+                        <td>Сообщение</td>
+                        <td>Число</td>
+                    </tr>
+                <tbody>
+                    {% for log_entry in logs %}
+                    <tr>
+                        <td>{{ log_entry.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ log_entry.event_type }}</td>
+                        <td>{{ log_entry.message }}</td>
+                        <td>{{ log_entry.received_number if log_entry.received_number is not none else '' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <br>
+        <a href="/"> Вернуться назад </a>
+    </body>
+</html>
