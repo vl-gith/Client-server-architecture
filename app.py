@@ -9,6 +9,13 @@
 # flask db init
 # http://127.0.0.1:5000/
 
+# create db:
+# CREATE DATABASE my_db;
+# CREATE USER 'vladislav'@'localhost' IDENTIFIED BY '!Hello_World123';
+# GRANT ALL PRIVILEGES ON my_db.* TO 'vladislav'@'localhost';
+# FLUSH PRIVILEGES;
+# EXIT;
+
 from flask import Flask, request, render_template
 
 # не будем писать SQL вручную
