@@ -16,6 +16,7 @@
 # FLUSH PRIVILEGES;
 # EXIT;
 
+import os
 from flask import Flask, request, render_template
 
 # не будем писать SQL вручную
@@ -25,8 +26,17 @@ from flask_migrate import Migrate
 #объект flask
 app = Flask(__name__)
 
+# настройки для переменных окружения
+db_user = os.getenv('DB_USER', 'vladislav')
+db_password = os.getenv('DB_PASSWORD', '!Hello_World123')
+db_host = os.getenv('DB_HOST', 'localhost')
+db_name = os.getenv('DB_NAME', 'my_db')
+db_port = os.getenv('DB_PORT', '3306')
+
 # конфиг для бд
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://vladislav:!Hello_World123@localhost/my_db'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://vladislav:!Hello_World123@localhost/my_db'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
