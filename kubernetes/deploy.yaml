@@ -61,6 +61,8 @@ spec:
       containers:
       - name: my-app-container
         image: fr1d4y/rvs-app:v1
+        command: ["/bin/sh"]
+        args: ["-c", "flask db upgrade && flask run --host=0.0.0.0"]
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
