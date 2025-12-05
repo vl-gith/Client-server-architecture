@@ -17,7 +17,7 @@
 # EXIT;
 
 import os
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 
 # не будем писать SQL вручную
 from flask_sqlalchemy import SQLAlchemy
@@ -25,6 +25,7 @@ from flask_migrate import Migrate
 
 #объект flask
 app = Flask(__name__)
+app.json.ensure_ascii = False
 
 # настройки для переменных окружения
 db_user = os.getenv('DB_USER', 'vladislav')
@@ -69,28 +70,47 @@ class Log(db.Model):
     # временная метка
     timestamp = db.Column(db.DateTime, server_default=db.func.now())
 
-    def __repr__(self):
-        return f'<Log {self.id}: {self.event_type}>'
-    
-@app.route('/')
-def index_page():
-    # если кто-то зайдет на главную страницу, то эта функция будет выполняться
-    return render_template('index.html')
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'event_type': self.event_type,
+            'message': self.message,
+            'received_number': self.received_number,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None
+        }
 
 @app.route('/increment_num', methods=['POST'])
 def increment_num():
-    number_str = request.form.get('number')
-
+    data = request.get_json()
+    
     # проверка входных данных
-    if number_str is None:
-        return "Ошибка: число не было передано в теле запроса", 400
-    try:
-        number = int(number_str)
-        if number < 0:
-            return "Число должно быть больше нуля", 400
-    except ValueError:
-        return "Ошибка: передано не число", 400
+    if not data or 'number' not in data:
+        return jsonify({
+            "status": "error",
+            "message": "Field 'number' is required in JSON body",
+            "data": None,
+            "logs": []
+        }), 400
 
+    raw_number = data.get('number')
+
+    try:
+        number = int(raw_number)
+        if number < 0:
+            return jsonify({
+                "status": "error",
+                "message": "Number must be positive",
+                "data": None,
+                "logs": []
+            }), 400
+    except (ValueError, TypeError):
+        return jsonify({
+            "status": "error",
+            "message": "Invalid number format",
+            "data": None,
+            "logs": []
+        }), 400
+    
     # проверка последовательности
     last_processed = ProcessedNumber.query.order_by(ProcessedNumber.id.desc()).first()
     if last_processed and number == last_processed.number - 1:
@@ -98,26 +118,36 @@ def increment_num():
         new_log = Log(event_type='ERROR_SEQUENCE', message=error_message, received_number=number)
         db.session.add(new_log)
         db.session.commit()
-
-        # забираем логи, в лимите можно установить сколько логов выводить
+        
+        # логи
         recent_logs = Log.query.order_by(Log.timestamp.desc()).limit(1).all()
+        logs_json = [log.to_dict() for log in recent_logs]
 
-        return render_template('error.html', error_message=error_message, logs=recent_logs), 400
-    
+        return jsonify({
+            "status": "error",
+            "message": error_message,
+            "data": None,
+            "logs": logs_json
+        }), 400
+
     # проверка на дубликат
     existing_number = ProcessedNumber.query.filter_by(number=number).first()
     if existing_number:
-        # если дубликат
         error_message = f"Ошибка: число {number} уже было обработано ранее."
         new_log = Log(event_type='ERROR_DUPLICATE', message=error_message, received_number=number)
         db.session.add(new_log)
         db.session.commit()
-        
-        # забираем логи, в лимите можно установить сколько логов выводить
+        # логи
         recent_logs = Log.query.order_by(Log.timestamp.desc()).limit(1).all()
+        logs_json = [log.to_dict() for log in recent_logs]
 
-        return render_template('error.html', error_message=error_message, logs=recent_logs), 409
-
+        return jsonify({
+            "status": "error",
+            "message": error_message,
+            "data": None,
+            "logs": logs_json
+        }), 409
+    
     # успешная обработка, инкрементируем
     result = number + 1
 
@@ -133,5 +163,13 @@ def increment_num():
     db.session.add(new_log)
     db.session.commit()
 
-    # возвращаем страницу с результатом
-    return render_template('result.html', final_result=result, original_number=number)
+    # возвращаем результат
+    return jsonify({
+        "status": "success",
+        "message": success_message,
+        "data": {
+            "original_number": number,
+            "result": result
+        },
+        "logs": []
+    }), 200
